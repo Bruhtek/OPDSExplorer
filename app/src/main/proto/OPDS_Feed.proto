@@ -1,0 +1,26 @@
+syntax = "proto3";
+
+option java_package = "com.bruhtek.opdsexplorer.proto";
+option java_multiple_files = true;
+
+message FeedProto {
+  string url = 1;
+
+  AuthTypeProto authType = 2;
+  optional string username = 3;
+  optional string password = 4;
+
+  string title = 5;
+  string subtitle = 6;
+  string imageUrl = 7;
+}
+
+message FeedListProto {
+  repeated FeedProto feeds = 1;
+  optional bool initialized = 2;
+}
+
+enum AuthTypeProto {
+  NONE = 0;
+  BASIC = 1;
+}
