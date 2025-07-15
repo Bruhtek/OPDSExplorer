@@ -1,6 +1,7 @@
 package com.bruhtek.opdsexplorer
 
 import com.bruhtek.opdsexplorer.opdsclient.OpdsFeed
+import com.bruhtek.opdsexplorer.opdsclient.fetchNextPage
 import com.bruhtek.opdsexplorer.opdsclient.fetchPath
 import com.bruhtek.opdsexplorer.opdsclient.fetchRoot
 import com.bruhtek.opdsexplorer.proto.FeedProto
@@ -40,5 +41,20 @@ class OpdsClientTest {
             feedData = fetchPath(feed, "/ebooks/2641.opds")
         }
         assert(feedData != null)
+    }
+
+    @Test
+    fun properly_parse_next_page() {
+        var updatedFeed: OpdsFeed?;
+        var feedData: OpdsFeed?
+        runBlocking {
+            feedData = fetchPath(feed, "/ebooks/search.opds/?sort_order=downloads")
+
+            updatedFeed = fetchNextPage(feed, feedData)
+        }
+        assert(feedData != null)
+        assert(updatedFeed != null)
+        println("Starting size: ${feedData!!.entry.size}, New size: ${updatedFeed!!.entry.size}")
+        assert(updatedFeed.entry.containsAll(feedData.entry))
     }
 }

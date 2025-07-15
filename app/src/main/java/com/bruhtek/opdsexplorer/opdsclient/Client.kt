@@ -23,9 +23,33 @@ suspend fun fetchPath(feed: FeedProto, path: String): OpdsFeed {
     val builder = Uri.Builder();
     builder.scheme(Url(feedUrl).protocol.name)
         .authority(Url(feedUrl).authority)
-        .path(path)
+        .encodedPath(path)
     val url = builder.build().toString()
     Log.d("OpdsClient", "Fetching path: $url, made from $feedUrl and $path")
     val res = getClient(feed).get(url)
     return res.body()
+}
+
+suspend fun fetchNextPage(feed: FeedProto, opdsFeed: OpdsFeed): OpdsFeed {
+    val next = opdsFeed.nextPageUrl()
+    if (next.isNullOrEmpty()) {
+        Log.d("OpdsClient", "No next page to fetch for path: ${opdsFeed.selfPage()}")
+        return opdsFeed
+    }
+    val decoded = Uri.decode(next)
+
+    val nextPage = fetchPath(feed, decoded)
+
+    val newFeed = OpdsFeed(
+        id = opdsFeed.id,
+        title = opdsFeed.title,
+        subtitle = opdsFeed.subtitle,
+        updated = opdsFeed.updated,
+        author = opdsFeed.author,
+        icon = opdsFeed.icon,
+        link = nextPage.link,
+        entry = opdsFeed.entry + nextPage.entry,
+    )
+
+    return newFeed
 }

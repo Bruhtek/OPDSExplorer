@@ -152,5 +152,19 @@ data class OpdsFeed(
     val entry: List<OpdsEntry> = emptyList(),
     @XmlElement(true)
     val icon: String? = null,
-)
+) {
+    // link rel=next - link to the next page of results
+    fun nextPageUrl(): String? {
+        return link.firstOrNull { it.rel == "next" }?.href
+    }
+
+    fun isLastPage(): Boolean {
+        return link.none { it.rel == "next" }
+    }
+
+    fun selfPage(): String? {
+        return link.firstOrNull { it.rel == "self" }?.href
+    }
+}
+
 

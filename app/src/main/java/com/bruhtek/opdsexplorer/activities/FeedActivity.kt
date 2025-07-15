@@ -28,10 +28,12 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
@@ -45,9 +47,11 @@ import androidx.compose.ui.unit.dp
 import com.bruhtek.opdsexplorer.components.Item
 import com.bruhtek.opdsexplorer.opdsclient.OpdsEntry
 import com.bruhtek.opdsexplorer.opdsclient.OpdsFeed
+import com.bruhtek.opdsexplorer.opdsclient.fetchNextPage
 import com.bruhtek.opdsexplorer.opdsclient.fetchPath
 import com.bruhtek.opdsexplorer.proto.FeedProto
 import com.bruhtek.opdsexplorer.ui.theme.OPDSExplorerTheme
+import kotlinx.coroutines.launch
 
 const val EXTRA_FEED_PROTO_BYTES = "feed_proto_bytes"
 const val EXTRA_FEED_PATH = "feed_path"
@@ -137,11 +141,35 @@ class FeedActivity : ComponentActivity() {
                 )
             }
         } else {
+            val feed by rememberUpdatedState(opdsFeed)
+
             opdsFeed?.let { data ->
                 if (data.entry.isEmpty()) {
                     Text(text = "No entries found in this feed.")
                 } else {
-                    EntriesDisplay(data)
+                    EntriesDisplay(
+                        opdsFeed = data,
+                        fetchNextPage = {
+                            scope.launch {
+                                Log.d(
+                                    "FeedActivity",
+                                    "Fetching next page for feed: ${feedProto.title}"
+                                )
+                                try {
+                                    if (feed != null) {
+                                        val next = fetchNextPage(feedProto, feed!!)
+                                        opdsFeed = next
+                                    }
+                                } catch (e: Exception) {
+                                    Log.e(
+                                        "FeedActivity",
+                                        "Error fetching next page: ${e.message}",
+                                        e
+                                    )
+                                }
+                            }
+                        }
+                    )
                 }
             } ?: run {
                 Text(text = "Failed to load feed.")
@@ -151,18 +179,23 @@ class FeedActivity : ComponentActivity() {
 
     @SuppressLint("UnusedBoxWithConstraintsScope")
     @Composable
-    fun EntriesDisplay(feed: OpdsFeed) {
+    fun EntriesDisplay(
+        opdsFeed: OpdsFeed,
+        fetchNextPage: () -> Unit = {},
+    ) {
         val context = LocalContext.current
         var currentPage by remember { mutableIntStateOf(0) }
         var itemHeight by remember { mutableIntStateOf(-1) }
-        var offsetX by remember { mutableStateOf(0f) }
+        var offsetX by remember { mutableFloatStateOf(0f) }
+
+        val feed by rememberUpdatedState(opdsFeed)
+
 
         if (itemHeight == -1) {
             MeasureItem { placeable ->
                 itemHeight = placeable.height
             }
         } else {
-
             Column() {
                 BoxWithConstraints(Modifier.fillMaxSize()) {
                     val itemPadding = 8.dp;
@@ -174,7 +207,7 @@ class FeedActivity : ComponentActivity() {
                         itemsPerPage =
                             ((maxHeightPx - itemPaddingPx) / (itemHeight + itemPaddingPx)).toInt()
                     }
-                    val pageCount = (feed.entry.size + itemsPerPage - 1) / itemsPerPage
+                    var pageCount = (feed.entry.size + itemsPerPage - 1) / itemsPerPage
 
                     val startIndex = currentPage * itemsPerPage
                     var endIndex = startIndex + itemsPerPage
@@ -188,19 +221,6 @@ class FeedActivity : ComponentActivity() {
                         "Current page: $currentPage, Items per page: $itemsPerPage, Start index: $startIndex, End index: $endIndex"
                     )
 
-                    fun onSwipeRight() {
-                        if (currentPage > 0) {
-                            Log.d("FeedActivity", "Swiping left, current page: $currentPage")
-                            currentPage--
-                        }
-                    }
-
-                    fun onSwipeLeft() {
-                        if (currentPage < pageCount - 1) {
-                            Log.d("FeedActivity", "Swiping right, current page: $currentPage")
-                            currentPage++
-                        }
-                    }
 
                     Column(
                         Modifier
@@ -208,14 +228,32 @@ class FeedActivity : ComponentActivity() {
                             .pointerInput(Unit) {
                                 detectDragGestures(
                                     onDragEnd = {
+                                        // recalculate the page count when changing pages
+                                        pageCount =
+                                            (feed.entry.size + itemsPerPage - 1) / itemsPerPage
                                         when {
                                             offsetX > 100 -> {
-                                                onSwipeRight()
+                                                if (currentPage > 0) {
+                                                    Log.d(
+                                                        "FeedActivity",
+                                                        "Swiping left, current page: $currentPage"
+                                                    )
+                                                    currentPage--
+                                                }
                                                 offsetX = 0f // Reset position
                                             }
 
                                             offsetX < -100 -> {
-                                                onSwipeLeft()
+                                                if (currentPage + 5 > pageCount) {
+                                                    fetchNextPage()
+                                                }
+                                                if (currentPage < pageCount - 1) {
+                                                    Log.d(
+                                                        "FeedActivity",
+                                                        "Swiping right, current page: $currentPage"
+                                                    )
+                                                    currentPage++
+                                                }
                                                 offsetX = 0f // Reset position
                                             }
 
@@ -240,7 +278,10 @@ class FeedActivity : ComponentActivity() {
                             }
                         }
                         Text(
-                            text = "Total entries: ${feed.entry.size} | Page ${currentPage + 1} of $pageCount",
+                            text = "Total entries: ${feed.entry.size}" +
+                                    (if (feed.isLastPage()) "" else " (?)") +
+                                    " | Page ${currentPage + 1} of $pageCount" +
+                                    (if (feed.isLastPage()) "" else " (?)"),
                         )
                     }
                 }
