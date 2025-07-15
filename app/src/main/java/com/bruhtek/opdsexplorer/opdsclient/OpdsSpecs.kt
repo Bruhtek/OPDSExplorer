@@ -56,6 +56,16 @@ data class OpdsEntry(
         return url?.href
     }
 
+    fun acquisitionUrl(): String? {
+        val url =
+            link.firstOrNull {
+                (it.rel == "http://opds-spec.org/acquisition"
+                        || it.rel == "http://opds-spec.org/acquisition/open-access")
+                        && it.type == "application/epub+zip"
+            }
+        return url?.href
+    }
+
     fun subtitle(): String {
         var subtitle = summary ?: ""
         if (subtitle.isEmpty()) {

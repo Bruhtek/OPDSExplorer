@@ -16,6 +16,8 @@ dataStore = "1.1.7"
 protoBuf = "4.31.1"
 robolectric = "4.15.1"
 xmlutilSerializationJvm = "0.91.1"
+appcompat = "1.7.1"
+documentfile = "1.1.0"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -45,6 +47,7 @@ ktor-serialization-kotlinx-xml = { module = "io.ktor:ktor-serialization-kotlinx-
 protobuf = { group = "com.google.protobuf", name = "protobuf-javalite", version.ref = "protoBuf" }
 robolectric = { module = "org.robolectric:robolectric", version.ref = "robolectric" }
 xmlutil-serialization-jvm = { module = "io.github.pdvrieze.xmlutil:serialization-jvm", version.ref = "xmlutilSerializationJvm" }
+documentfile = { group = "androidx.documentfile", name = "documentfile", version.ref = "documentfile" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

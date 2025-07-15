@@ -23,13 +23,10 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        <activity
-            android:name=".activities.FeedActivity">
-        </activity>
 
-        <activity
-            android:name=".activities.AddNewFeedActivity">
-        </activity>
+        <activity android:name=".activities.FeedActivity" />
+        <activity android:name=".activities.AddNewFeedActivity" />
+        <activity android:name=".filesystem.OOBEFilesystemActivity" />
 
     </application>
 

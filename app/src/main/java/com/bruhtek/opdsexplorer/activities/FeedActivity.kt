@@ -291,6 +291,11 @@ class FeedActivity : ComponentActivity() {
 
     @Composable
     fun ItemWithHrefs(entry: OpdsEntry) {
+        val acquisition = entry.acquisitionUrl()
+        if (acquisition != null) {
+            // TODO: Handle acquisition URL - on click, start a new activity/download process of some kind
+        }
+
         val href = entry.linkUrl();
         if (href == null) {
             Item(

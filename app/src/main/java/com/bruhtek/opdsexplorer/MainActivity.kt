@@ -35,7 +35,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.core.net.toUri
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.lifecycleScope
 import com.bruhtek.opdsexplorer.activities.AddNewFeedActivity
 import com.bruhtek.opdsexplorer.activities.EXTRA_FEED_PATH
 import com.bruhtek.opdsexplorer.activities.EXTRA_FEED_PROTO_BYTES
@@ -45,18 +47,24 @@ import com.bruhtek.opdsexplorer.components.Item
 import com.bruhtek.opdsexplorer.datastore.feedListStore
 import com.bruhtek.opdsexplorer.datastore.initializeFeedListStore
 import com.bruhtek.opdsexplorer.datastore.removeFeed
+import com.bruhtek.opdsexplorer.filesystem.DocumentTreeRepository
+import com.bruhtek.opdsexplorer.filesystem.OOBEFilesystemActivity
 import com.bruhtek.opdsexplorer.proto.FeedListProto
 import com.bruhtek.opdsexplorer.proto.FeedProto
 import com.bruhtek.opdsexplorer.ui.theme.OPDSExplorerTheme
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 
 class MainActivity : ComponentActivity() {
+    private lateinit var documentTreeRepository: DocumentTreeRepository
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
-        runBlocking { this@MainActivity.initializeFeedListStore() }
+        documentTreeRepository = DocumentTreeRepository.getInstance(this)
 
+        runBlocking { this@MainActivity.initializeFeedListStore() }
 
         setContent {
             var editMode by remember { mutableStateOf(false) }
@@ -83,6 +91,28 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+    }
+
+    override fun onResume() {
+        super.onResume()
+
+        lifecycleScope.launch {
+            documentTreeRepository.treeUriFlow.collect { uriString ->
+                if (uriString == null || !documentTreeRepository.hasValidPermissions(
+                        uriString.toUri()
+                    )
+                ) {
+                    documentTreeRepository.clearTreeUri()
+
+                    val intent = Intent(
+                        this@MainActivity, OOBEFilesystemActivity::class.java
+                    )
+                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    startActivity(intent)
+                }
+            }
+        }
+
     }
 }
 
